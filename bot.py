@@ -6,6 +6,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, fil
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHANNEL_ID = "@shegeftiha_iran_jahan"
 CHANNEL_URL = "https://t.me/shegeftiha_iran_jahan"
+MAJID_API_URL = "https://api.majidapi.ir/music/radiojavan"
 
 favorites = {}
 
@@ -147,8 +148,7 @@ async def iran_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"🇮🇷 در حال جستجوی {query} ...")
 
     try:
-        search_url = f"https://api.majidapi.ir/music/radiojavan?action=search&s={query}"
-        response = requests.get(search_url, timeout=15)
+        response = requests.get(MAJID_API_URL, params={"action": "search", "s": query}, timeout=15)
         data = response.json()
 
         if not data or 'result' not in data or not data['result']:
