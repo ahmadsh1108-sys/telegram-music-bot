@@ -4,6 +4,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
+MAJID_TOKEN = os.environ.get("MAJID_TOKEN")
 CHANNEL_ID = "@shegeftiha_iran_jahan"
 CHANNEL_URL = "https://t.me/shegeftiha_iran_jahan"
 
@@ -38,17 +39,16 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     await update.message.reply_text(
         "📖 راهنمای ربات MelodyHunter\n\n"
-        "🔍 جستجوی آهنگ:\n"
+        "🔍 جستجوی آهنگ خارجی:\n"
         "فقط اسم آهنگ یا خواننده رو بنویس (مثلاً: Ed Sheeran)\n\n"
-        "👤 جستجوی خواننده:\n"
+        "👤 جستجوی خواننده خارجی:\n"
         "دستور /artist و بعد اسم خواننده\n"
         "مثال: /artist Ed Sheeran\n\n"
+        "🇮🇷 جستجوی آهنگ ایرانی:\n"
+        "دستور /iran و بعد اسم خواننده یا آهنگ\n"
+        "مثال: /iran شادمهر\n\n"
         "⭐ ذخیره آهنگ:\n"
         "روی دکمه ⭐ ذخیره بزن تا آهنگ به لیست علاقه‌مندی‌هات اضافه بشه\n\n"
-        "📤 اشتراک‌گذاری:\n"
-        "روی دکمه 📤 بزن تا لینک آهنگ رو ببینی\n\n"
-        "🎵 پیشنهاد مشابه:\n"
-        "روی دکمه 🎵 مشابه بزن تا آهنگ‌های مشابه ببینی\n\n"
         "❤️ آهنگ‌های موردعلاقه:\n"
         "دستور /favorites برای دیدن لیست ذخیره شده‌ها"
     )
@@ -114,7 +114,7 @@ async def artist_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
         artist_id = data['data'][0]['id']
         artist_real_name = data['data'][0]['name']
 
-        tracks_url = f"https://api.deezer.com/artist/{artist_id}/top?limit=5"
+        tracks_url = f"https://api.deezer.com/artist/{artist_id}/top?limit=15"
         tracks_response = requests.get(tracks_url)
         tracks_data = tracks_response.json()
 
@@ -131,6 +131,53 @@ async def artist_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ خطا در جستجو. لطفاً بعداً امتحان کن.")
         print(f"Error: {e}")
 
+async def iran_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """جستجوی آهنگ‌های ایرانی از طریق API ماجید با توکن"""
+    if not await is_user_member(update, context):
+        return
+
+    if not context.args:
+        await update.message.reply_text("❌ لطفاً اسم خواننده یا آهنگ رو بنویس.\nمثال: /iran شادمهر")
+        return
+
+    query = " ".join(context.args)
+    await update.message.reply_text(f"🇮🇷 در حال جستجوی {query} ...")
+
+    try:
+        url = "https://api.majidapi.ir/music/radiojavan"
+        params = {
+            "token": MAJID_TOKEN,
+            "action": "search",
+            "s": query
+        }
+        response = requests.get(url, params=params, timeout=20)
+        data = response.json()
+
+        if not data or 'result' not in data or not data['result']:
+            await update.message.reply_text("❌ متأسفانه آهنگ ایرانی پیدا نشد. یه اسم دیگه امتحان کن.")
+            return
+
+        await update.message.reply_text(f"🎵 نتایج جستجو برای {query}:")
+
+        for song in data['result'][:15]:
+            title = song.get('title', 'ناشناس')
+            artist = song.get('artist', 'ناشناس')
+            song_id = song.get('id', '')
+
+            link = f"https://play.radiojavan.com/song/{song_id}" if song_id else ""
+
+            message = f"🎵 {title}\n👤 خواننده: {artist}\n"
+            buttons = []
+            if link:
+                buttons.append([InlineKeyboardButton("🔗 صفحه آهنگ", url=link)])
+
+            reply_markup = InlineKeyboardMarkup(buttons) if buttons else None
+            await update.message.reply_text(message, reply_markup=reply_markup)
+
+    except Exception as e:
+        await update.message.reply_text("⚠️ خطا در جستجوی ایرانی. لطفاً بعداً امتحان کن.")
+        print(f"Iran Search Error: {e}")
+
 async def search_music(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_user_member(update, context):
         return
@@ -139,7 +186,7 @@ async def search_music(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"🔍 در حال جستجو برای: {query} ...")
 
     try:
-        url = f"https://api.deezer.com/search?q={query}&limit=5"
+        url = f"https://api.deezer.com/search?q={query}&limit=15"
         response = requests.get(url)
         data = response.json()
 
@@ -217,6 +264,7 @@ if __name__ == '__main__':
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("artist", artist_search))
+    application.add_handler(CommandHandler("iran", iran_search))
     application.add_handler(CommandHandler("favorites", favorites_command))
     application.add_handler(CallbackQueryHandler(button_callback))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, search_music))
