@@ -2,3 +2,6 @@ python-telegram-bot
 
 python-telegram-bot
 requests
+
+python-telegram-bot
+requests
