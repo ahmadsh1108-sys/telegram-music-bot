@@ -2,14 +2,12 @@ import os
 import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
-from radiojavanapi import Client
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHANNEL_ID = "@shegeftiha_iran_jahan"
 CHANNEL_URL = "https://t.me/shegeftiha_iran_jahan"
 
 favorites = {}
-rj_client = Client()
 
 async def is_user_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     user_id = update.effective_user.id
@@ -137,7 +135,7 @@ async def artist_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print(f"Error: {e}")
 
 async def iran_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """جستجوی آهنگ‌های ایرانی از رادیو جوان"""
+    """جستجوی آهنگ‌های ایرانی از طریق API ماجید"""
     if not await is_user_member(update, context):
         return
 
@@ -146,26 +144,28 @@ async def iran_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     query = " ".join(context.args)
-    await update.message.reply_text(f"🇮🇷 در حال جستجوی {query} در رادیو جوان ...")
+    await update.message.reply_text(f"🇮🇷 در حال جستجوی {query} ...")
 
     try:
-        results = rj_client.search(query)
-        if not results or not results.get('songs'):
-            await update.message.reply_text("❌ متأسفانه آهنگی پیدا نشد. یه اسم دیگه امتحان کن.")
+        search_url = f"https://api.majidapi.ir/music/radiojavan?action=search&s={query}"
+        response = requests.get(search_url, timeout=15)
+        data = response.json()
+
+        if not data or 'result' not in data or not data['result']:
+            await update.message.reply_text("❌ متأسفانه آهنگ ایرانی پیدا نشد. یه اسم دیگه امتحان کن.")
             return
 
         await update.message.reply_text(f"🎵 نتایج جستجو برای {query}:")
 
-        for song in results['songs'][:5]:
-            title = song.name
-            artist = song.artist
-            link = song.link
-            preview = song.hq_link
+        for song in data['result'][:5]:
+            title = song.get('title', 'ناشناس')
+            artist = song.get('artist', 'ناشناس')
+            song_id = song.get('id', '')
+
+            link = f"https://play.radiojavan.com/song/{song_id}" if song_id else ""
 
             message = f"🎵 {title}\n👤 خواننده: {artist}\n"
             buttons = []
-            if preview:
-                buttons.append([InlineKeyboardButton("🔊 دانلود", url=preview)])
             if link:
                 buttons.append([InlineKeyboardButton("🔗 صفحه آهنگ", url=link)])
 
