@@ -1,10 +1,10 @@
-import os
+ import os
 import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
-MAJID_TOKEN = os.environ.get("MAJID_TOKEN")
+OMDB_TOKEN = os.environ.get("OMDB_TOKEN")
 CHANNEL_ID = "@shegeftiha_iran_jahan"
 CHANNEL_URL = "https://t.me/shegeftiha_iran_jahan"
 
@@ -28,10 +28,26 @@ async def is_user_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_user_member(update, context):
         return
+    user_name = update.effective_user.first_name
+    keyboard = [
+        [InlineKeyboardButton("🔍 جستجوی آهنگ", callback_data="help_music"), InlineKeyboardButton("🎬 جستجوی فیلم", callback_data="help_movie")],
+        [InlineKeyboardButton("📺 جستجوی سریال", callback_data="help_series"), InlineKeyboardButton("📖 راهنما", callback_data="help_help")],
+        [InlineKeyboardButton("⭐ علاقه‌مندی‌ها", callback_data="help_fav")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
-        "🎵 سلام! به MelodyHunter خوش اومدی.\n\n"
-        "برای جستجوی آهنگ، فقط اسمش رو بنویس.\n"
-        "برای دیدن راهنما، دستور /help رو بزن."
+        f"🎵 سلام {user_name}! به MelodyHunter خوش اومدی 🎶\n\n"
+        "من می‌تونم برات آهنگ، فیلم و سریال پیدا کنم! 🎧🎬📺\n\n"
+        "🔍 چطور از من استفاده کنی:\n"
+        "• برای جستجوی آهنگ: فقط اسم آهنگ یا خواننده رو بفرست\n"
+        "• برای جستجوی خواننده: /artist اسم خواننده\n"
+        "• برای جستجوی فیلم: /movie اسم فیلم\n"
+        "• برای جستجوی سریال: /series اسم سریال\n"
+        "• برای فیلم‌های روز: /newmovies\n"
+        "• برای سریال‌های جدید: /newseries\n"
+        "• برای دیدن راهنما: /help\n\n"
+        "🎼 منتظرت هستم، اسم آهنگ یا فیلمت رو بفرست!",
+        reply_markup=reply_markup
     )
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -39,18 +55,25 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     await update.message.reply_text(
         "📖 راهنمای ربات MelodyHunter\n\n"
-        "🔍 جستجوی آهنگ خارجی:\n"
+        "🎵 جستجوی آهنگ:\n"
         "فقط اسم آهنگ یا خواننده رو بنویس (مثلاً: Ed Sheeran)\n\n"
-        "👤 جستجوی خواننده خارجی:\n"
+        "👤 جستجوی خواننده:\n"
         "دستور /artist و بعد اسم خواننده\n"
         "مثال: /artist Ed Sheeran\n\n"
-        "🇮🇷 جستجوی آهنگ ایرانی:\n"
-        "دستور /iran و بعد اسم خواننده یا آهنگ\n"
-        "مثال: /iran شادمهر\n\n"
+        "🎬 جستجوی فیلم:\n"
+        "دستور /movie و بعد اسم فیلم\n"
+        "مثال: /movie Inception\n\n"
+        "📺 جستجوی سریال:\n"
+        "دستور /series و بعد اسم سریال\n"
+        "مثال: /series Breaking Bad\n\n"
+        "🆕 فیلم‌های روز:\n"
+        "دستور /newmovies برای دیدن فیلم‌های جدید ۲۰۲۶\n\n"
+        "📺 سریال‌های جدید:\n"
+        "دستور /newseries برای دیدن سریال‌های جدید ۲۰۲۶\n\n"
         "⭐ ذخیره آهنگ:\n"
-        "روی دکمه ⭐ ذخیره بزن تا آهنگ به لیست علاقه‌مندی‌هات اضافه بشه\n\n"
+        "روی دکمه ⭐ ذخیره بزن\n\n"
         "❤️ آهنگ‌های موردعلاقه:\n"
-        "دستور /favorites برای دیدن لیست ذخیره شده‌ها"
+        "دستور /favorites"
     )
 
 async def favorites_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -65,10 +88,11 @@ async def favorites_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for fav in favorites[user_id]:
         message = f"🎵 {fav['title']}\n👤 خواننده: {fav['artist']}"
         buttons = []
-        if fav.get('preview'):
-            buttons.append([InlineKeyboardButton("🔊 پیش‌نمایش", url=fav['preview'])])
-        if fav.get('link'):
-            buttons.append([InlineKeyboardButton("🔗 لینک کامل", url=fav['link'])])
+        if fav.get('preview') and fav.get('link'):
+            buttons.append([
+                InlineKeyboardButton("🔊 پیش‌نمایش", url=fav['preview']),
+                InlineKeyboardButton("🔗 لینک کامل", url=fav['link'])
+            ])
         reply_markup = InlineKeyboardMarkup(buttons) if buttons else None
         await update.message.reply_text(message, reply_markup=reply_markup)
 
@@ -80,13 +104,21 @@ async def send_song_with_buttons(update, track, artist_name):
     message = f"🎵 {title}\n👤 خواننده: {artist_name}\n"
 
     buttons = []
-    if preview:
+    if preview and link:
+        buttons.append([
+            InlineKeyboardButton("🔊 پیش‌نمایش", url=preview),
+            InlineKeyboardButton("🔗 لینک کامل", url=link)
+        ])
+    elif preview:
         buttons.append([InlineKeyboardButton("🔊 پیش‌نمایش", url=preview)])
-    if link:
+    elif link:
         buttons.append([InlineKeyboardButton("🔗 لینک کامل", url=link)])
-        buttons.append([InlineKeyboardButton("⭐ ذخیره", callback_data=f"fav|{title}|{artist_name}")])
-        buttons.append([InlineKeyboardButton("📤 اشتراک‌گذاری", callback_data=f"share|{link}")])
-        buttons.append([InlineKeyboardButton("🎵 مشابه", callback_data=f"similar|{title}|{artist_name}")])
+
+    if link:
+        buttons.append([
+            InlineKeyboardButton("⭐ ذخیره", callback_data=f"fav|{title}|{artist_name}"),
+            InlineKeyboardButton("📤 اشتراک‌گذاری", callback_data=f"share|{link}")
+        ])
 
     reply_markup = InlineKeyboardMarkup(buttons) if buttons else None
     await update.message.reply_text(message, reply_markup=reply_markup)
@@ -114,7 +146,7 @@ async def artist_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
         artist_id = data['data'][0]['id']
         artist_real_name = data['data'][0]['name']
 
-        tracks_url = f"https://api.deezer.com/artist/{artist_id}/top?limit=15"
+        tracks_url = f"https://api.deezer.com/artist/{artist_id}/top?limit=1"
         tracks_response = requests.get(tracks_url)
         tracks_data = tracks_response.json()
 
@@ -122,61 +154,212 @@ async def artist_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ آهنگی از این خواننده پیدا نشد.")
             return
 
-        await update.message.reply_text(f"🎵 آهنگ‌های برتر {artist_real_name}:")
-
-        for track in tracks_data['data']:
-            await send_song_with_buttons(update, track, artist_real_name)
+        await update.message.reply_text(f"🎵 آهنگ برتر {artist_real_name}:")
+        await send_song_with_buttons(update, tracks_data['data'][0], artist_real_name)
 
     except Exception as e:
         await update.message.reply_text("⚠️ خطا در جستجو. لطفاً بعداً امتحان کن.")
         print(f"Error: {e}")
 
-async def iran_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """جستجوی آهنگ‌های ایرانی از طریق API ماجید با توکن"""
+async def movie_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_user_member(update, context):
         return
 
     if not context.args:
-        await update.message.reply_text("❌ لطفاً اسم خواننده یا آهنگ رو بنویس.\nمثال: /iran شادمهر")
+        await update.message.reply_text("❌ لطفاً اسم فیلم رو هم بنویس.\nمثال: /movie Inception")
         return
 
-    query = " ".join(context.args)
-    await update.message.reply_text(f"🇮🇷 در حال جستجوی {query} ...")
+    movie_name = " ".join(context.args)
+    await update.message.reply_text(f"🎬 در حال جستجوی فیلم {movie_name} ...")
 
     try:
-        url = "https://api.majidapi.ir/music/radiojavan"
+        url = "https://www.omdbapi.com/"
         params = {
-            "token": MAJID_TOKEN,
-            "action": "search",
-            "s": query
+            "apikey": OMDB_TOKEN,
+            "t": movie_name,
+            "plot": "short",
+            "type": "movie"
         }
-        response = requests.get(url, params=params, timeout=20)
+        response = requests.get(url, params=params, timeout=15)
         data = response.json()
 
-        if not data or 'result' not in data or not data['result']:
-            await update.message.reply_text("❌ متأسفانه آهنگ ایرانی پیدا نشد. یه اسم دیگه امتحان کن.")
+        if data.get('Response') == 'False':
+            await update.message.reply_text(f"❌ فیلمی با اسم «{movie_name}» پیدا نشد.")
             return
 
-        await update.message.reply_text(f"🎵 نتایج جستجو برای {query}:")
+        title = data.get('Title', 'ناشناس')
+        year = data.get('Year', 'ناشناس')
+        genre = data.get('Genre', 'ناشناس')
+        director = data.get('Director', 'ناشناس')
+        actors = data.get('Actors', 'ناشناس')
+        plot = data.get('Plot', 'ناشناس')
+        poster = data.get('Poster', '')
+        imdb_rating = data.get('imdbRating', 'ناشناس')
+        imdb_link = f"https://www.imdb.com/title/{data.get('imdbID', '')}"
 
-        for song in data['result'][:15]:
-            title = song.get('title', 'ناشناس')
-            artist = song.get('artist', 'ناشناس')
-            song_id = song.get('id', '')
+        message = (
+            f"🎬 {title} ({year})\n\n"
+            f"🎭 ژانر: {genre}\n"
+            f"🎥 کارگردان: {director}\n"
+            f"👥 بازیگران: {actors}\n"
+            f"⭐ امتیاز IMDb: {imdb_rating}\n\n"
+            f"📝 خلاصه: {plot}\n"
+        )
 
-            link = f"https://play.radiojavan.com/song/{song_id}" if song_id else ""
+        buttons = [[InlineKeyboardButton("🔗 صفحه IMDb", url=imdb_link)]]
+        if poster and poster != 'N/A':
+            buttons.append([InlineKeyboardButton("🖼️ پوستر فیلم", url=poster)])
 
-            message = f"🎵 {title}\n👤 خواننده: {artist}\n"
-            buttons = []
-            if link:
-                buttons.append([InlineKeyboardButton("🔗 صفحه آهنگ", url=link)])
+        reply_markup = InlineKeyboardMarkup(buttons)
+        await update.message.reply_text(message, reply_markup=reply_markup)
 
-            reply_markup = InlineKeyboardMarkup(buttons) if buttons else None
+    except Exception as e:
+        await update.message.reply_text("⚠️ خطا در جستجوی فیلم. لطفاً بعداً امتحان کن.")
+        print(f"Movie Error: {e}")
+
+async def series_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await is_user_member(update, context):
+        return
+
+    if not context.args:
+        await update.message.reply_text("❌ لطفاً اسم سریال رو هم بنویس.\nمثال: /series Breaking Bad")
+        return
+
+    series_name = " ".join(context.args)
+    await update.message.reply_text(f"📺 در حال جستجوی سریال {series_name} ...")
+
+    try:
+        url = "https://www.omdbapi.com/"
+        params = {
+            "apikey": OMDB_TOKEN,
+            "t": series_name,
+            "plot": "short",
+            "type": "series"
+        }
+        response = requests.get(url, params=params, timeout=15)
+        data = response.json()
+
+        if data.get('Response') == 'False':
+            await update.message.reply_text(f"❌ سریالی با اسم «{series_name}» پیدا نشد.")
+            return
+
+        title = data.get('Title', 'ناشناس')
+        year = data.get('Year', 'ناشناس')
+        genre = data.get('Genre', 'ناشناس')
+        director = data.get('Director', 'ناشناس')
+        actors = data.get('Actors', 'ناشناس')
+        plot = data.get('Plot', 'ناشناس')
+        poster = data.get('Poster', '')
+        imdb_rating = data.get('imdbRating', 'ناشناس')
+        total_seasons = data.get('totalSeasons', 'ناشناس')
+        imdb_link = f"https://www.imdb.com/title/{data.get('imdbID', '')}"
+
+        message = (
+            f"📺 {title} ({year})\n\n"
+            f"🎭 ژانر: {genre}\n"
+            f"🎥 کارگردان: {director}\n"
+            f"👥 بازیگران: {actors}\n"
+            f"📺 تعداد فصل‌ها: {total_seasons}\n"
+            f"⭐ امتیاز IMDb: {imdb_rating}\n\n"
+            f"📝 خلاصه: {plot}\n"
+        )
+
+        buttons = [[InlineKeyboardButton("🔗 صفحه IMDb", url=imdb_link)]]
+        if poster and poster != 'N/A':
+            buttons.append([InlineKeyboardButton("🖼️ پوستر سریال", url=poster)])
+
+        reply_markup = InlineKeyboardMarkup(buttons)
+        await update.message.reply_text(message, reply_markup=reply_markup)
+
+    except Exception as e:
+        await update.message.reply_text("⚠️ خطا در جستجوی سریال. لطفاً بعداً امتحان کن.")
+        print(f"Series Error: {e}")
+
+async def new_movies(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """نمایش فیلم‌های جدید ۲۰۲۶"""
+    if not await is_user_member(update, context):
+        return
+
+    await update.message.reply_text("🆕 در حال جستجوی فیلم‌های جدید ۲۰۲۶ ...")
+
+    try:
+        url = "https://www.omdbapi.com/"
+        params = {
+            "apikey": OMDB_TOKEN,
+            "s": "2026",
+            "type": "movie",
+            "y": "2026"
+        }
+        response = requests.get(url, params=params, timeout=15)
+        data = response.json()
+
+        if data.get('Response') == 'False' or not data.get('Search'):
+            await update.message.reply_text("❌ متأسفانه فیلم جدیدی پیدا نشد.")
+            return
+
+        await update.message.reply_text("🎬 فیلم‌های جدید ۲۰۲۶:")
+
+        for movie in data['Search'][:10]:
+            title = movie.get('Title', 'ناشناس')
+            year = movie.get('Year', 'ناشناس')
+            poster = movie.get('Poster', '')
+            imdb_id = movie.get('imdbID', '')
+            imdb_link = f"https://www.imdb.com/title/{imdb_id}"
+
+            message = f"🎬 {title} ({year})\n"
+            buttons = [[InlineKeyboardButton("🔗 صفحه IMDb", url=imdb_link)]]
+            if poster and poster != 'N/A':
+                buttons.append([InlineKeyboardButton("🖼️ پوستر", url=poster)])
+
+            reply_markup = InlineKeyboardMarkup(buttons)
             await update.message.reply_text(message, reply_markup=reply_markup)
 
     except Exception as e:
-        await update.message.reply_text("⚠️ خطا در جستجوی ایرانی. لطفاً بعداً امتحان کن.")
-        print(f"Iran Search Error: {e}")
+        await update.message.reply_text("⚠️ خطا در جستجوی فیلم‌های جدید. لطفاً بعداً امتحان کن.")
+        print(f"New Movies Error: {e}")
+
+async def new_series(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """نمایش سریال‌های جدید ۲۰۲۶"""
+    if not await is_user_member(update, context):
+        return
+
+    await update.message.reply_text("🆕 در حال جستجوی سریال‌های جدید ۲۰۲۶ ...")
+
+    try:
+        url = "https://www.omdbapi.com/"
+        params = {
+            "apikey": OMDB_TOKEN,
+            "s": "2026",
+            "type": "series",
+            "y": "2026"
+        }
+        response = requests.get(url, params=params, timeout=15)
+        data = response.json()
+
+        if data.get('Response') == 'False' or not data.get('Search'):
+            await update.message.reply_text("❌ متأسفانه سریال جدیدی پیدا نشد.")
+            return
+
+        await update.message.reply_text("📺 سریال‌های جدید ۲۰۲۶:")
+
+        for series in data['Search'][:10]:
+            title = series.get('Title', 'ناشناس')
+            year = series.get('Year', 'ناشناس')
+            poster = series.get('Poster', '')
+            imdb_id = series.get('imdbID', '')
+            imdb_link = f"https://www.imdb.com/title/{imdb_id}"
+
+            message = f"📺 {title} ({year})\n"
+            buttons = [[InlineKeyboardButton("🔗 صفحه IMDb", url=imdb_link)]]
+            if poster and poster != 'N/A':
+                buttons.append([InlineKeyboardButton("🖼️ پوستر", url=poster)])
+
+            reply_markup = InlineKeyboardMarkup(buttons)
+            await update.message.reply_text(message, reply_markup=reply_markup)
+
+    except Exception as e:
+        await update.message.reply_text("⚠️ خطا در جستجوی سریال‌های جدید. لطفاً بعداً امتحان کن.")
+        print(f"New Series Error: {e}")
 
 async def search_music(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_user_member(update, context):
@@ -186,7 +369,7 @@ async def search_music(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"🔍 در حال جستجو برای: {query} ...")
 
     try:
-        url = f"https://api.deezer.com/search?q={query}&limit=15"
+        url = f"https://api.deezer.com/search?q={query}&limit=1"
         response = requests.get(url)
         data = response.json()
 
@@ -194,8 +377,8 @@ async def search_music(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ متأسفانه آهنگی پیدا نشد. یه اسم دیگه امتحان کن.")
             return
 
-        for track in data['data']:
-            await send_song_with_buttons(update, track, track['artist']['name'])
+        track = data['data'][0]
+        await send_song_with_buttons(update, track, track['artist']['name'])
 
     except Exception as e:
         await update.message.reply_text("⚠️ خطا در جستجو. لطفاً بعداً امتحان کن.")
@@ -206,7 +389,18 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     data = query.data
 
-    if data.startswith("fav|"):
+    if data == "help_music":
+        await query.message.reply_text("🔍 برای جستجوی آهنگ، فقط اسمش رو بنویس. مثلاً: Shape of You")
+    elif data == "help_help":
+        await query.message.reply_text("📖 برای دیدن راهنمای کامل، دستور /help رو بزن.")
+    elif data == "help_fav":
+        await query.message.reply_text("⭐ برای دیدن آهنگ‌های ذخیره‌شده، دستور /favorites رو بزن.")
+    elif data == "help_movie":
+        await query.message.reply_text("🎬 برای جستجوی فیلم، دستور /movie و بعد اسم فیلم رو بنویس. مثلاً: /movie Inception")
+    elif data == "help_series":
+        await query.message.reply_text("📺 برای جستجوی سریال، دستور /series و بعد اسم سریال رو بنویس. مثلاً: /series Breaking Bad")
+
+    elif data.startswith("fav|"):
         parts = data.split("|")
         title = parts[1]
         artist = parts[2]
@@ -229,42 +423,15 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         share_text = f"🎵 این آهنگ رو از MelodyHunter پیدا کردم:\n{link}"
         await query.edit_message_text(f"📤 متن اشتراک‌گذاری:\n\n{share_text}")
 
-    elif data.startswith("similar|"):
-        parts = data.split("|")
-        title = parts[1]
-        artist = parts[2]
-        await query.edit_message_text(f"🔍 آهنگ‌های مشابه با {title} از {artist} ...")
-
-        try:
-            url = f"https://api.deezer.com/search?q={artist}&limit=5"
-            response = requests.get(url)
-            data_json = response.json()
-
-            if data_json.get('data'):
-                for track in data_json['data']:
-                    similar_title = track['title']
-                    similar_artist = track['artist']['name']
-                    preview = track.get('preview', '')
-                    link = track.get('link', '')
-
-                    message = f"🎵 {similar_title}\n👤 خواننده: {similar_artist}\n"
-                    buttons = []
-                    if preview:
-                        buttons.append([InlineKeyboardButton("🔊 پیش‌نمایش", url=preview)])
-                    if link:
-                        buttons.append([InlineKeyboardButton("🔗 لینک کامل", url=link)])
-
-                    reply_markup = InlineKeyboardMarkup(buttons) if buttons else None
-                    await query.message.reply_text(message, reply_markup=reply_markup)
-        except Exception as e:
-            print(f"Similar Error: {e}")
-
 if __name__ == '__main__':
     application = ApplicationBuilder().token(BOT_TOKEN).build()
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("artist", artist_search))
-    application.add_handler(CommandHandler("iran", iran_search))
+    application.add_handler(CommandHandler("movie", movie_search))
+    application.add_handler(CommandHandler("series", series_search))
+    application.add_handler(CommandHandler("newmovies", new_movies))
+    application.add_handler(CommandHandler("newseries", new_series))
     application.add_handler(CommandHandler("favorites", favorites_command))
     application.add_handler(CallbackQueryHandler(button_callback))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, search_music))
