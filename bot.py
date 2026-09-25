@@ -43,8 +43,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• برای جستجوی خواننده: /artist اسم خواننده\n"
         "• برای جستجوی فیلم: /movie اسم فیلم\n"
         "• برای جستجوی سریال: /series اسم سریال\n"
-        "• برای فیلم‌های روز: /newmovies\n"
-        "• برای سریال‌های جدید: /newseries\n"
         "• برای دیدن راهنما: /help\n\n"
         "🎼 منتظرت هستم، اسم آهنگ یا فیلمت رو بفرست!",
         reply_markup=reply_markup
@@ -66,10 +64,6 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📺 جستجوی سریال:\n"
         "دستور /series و بعد اسم سریال\n"
         "مثال: /series Breaking Bad\n\n"
-        "🆕 فیلم‌های روز:\n"
-        "دستور /newmovies\n\n"
-        "📺 سریال‌های جدید:\n"
-        "دستور /newseries\n\n"
         "⭐ ذخیره آهنگ:\n"
         "روی دکمه ⭐ ذخیره بزن\n\n"
         "❤️ آهنگ‌های موردعلاقه:\n"
@@ -273,88 +267,6 @@ async def series_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ خطا در جستجوی سریال. لطفاً بعداً امتحان کن.")
         print(f"Series Error: {e}")
 
-async def new_movies(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not await is_user_member(update, context):
-        return
-
-    await update.message.reply_text("🆕 در حال جستجوی فیلم‌های جدید ...")
-
-    try:
-        url = "https://www.omdbapi.com/"
-        params = {
-            "apikey": OMDB_TOKEN,
-            "s": "2026",
-            "type": "movie"
-        }
-        response = requests.get(url, params=params, timeout=15)
-        data = response.json()
-
-        if data.get('Response') == 'False' or not data.get('Search'):
-            await update.message.reply_text("❌ متأسفانه فیلم جدیدی پیدا نشد.")
-            return
-
-        await update.message.reply_text("🎬 فیلم‌های جدید:")
-
-        for movie in data['Search'][:10]:
-            title = movie.get('Title', 'ناشناس')
-            year = movie.get('Year', 'ناشناس')
-            poster = movie.get('Poster', '')
-            imdb_id = movie.get('imdbID', '')
-            imdb_link = f"https://www.imdb.com/title/{imdb_id}"
-
-            message = f"🎬 {title} ({year})\n"
-            buttons = [[InlineKeyboardButton("🔗 صفحه IMDb", url=imdb_link)]]
-            if poster and poster != 'N/A':
-                buttons.append([InlineKeyboardButton("🖼️ پوستر", url=poster)])
-
-            reply_markup = InlineKeyboardMarkup(buttons)
-            await update.message.reply_text(message, reply_markup=reply_markup)
-
-    except Exception as e:
-        await update.message.reply_text("⚠️ خطا در جستجوی فیلم‌های جدید. لطفاً بعداً امتحان کن.")
-        print(f"New Movies Error: {e}")
-
-async def new_series(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not await is_user_member(update, context):
-        return
-
-    await update.message.reply_text("🆕 در حال جستجوی سریال‌های جدید ...")
-
-    try:
-        url = "https://www.omdbapi.com/"
-        params = {
-            "apikey": OMDB_TOKEN,
-            "s": "2026",
-            "type": "series"
-        }
-        response = requests.get(url, params=params, timeout=15)
-        data = response.json()
-
-        if data.get('Response') == 'False' or not data.get('Search'):
-            await update.message.reply_text("❌ متأسفانه سریال جدیدی پیدا نشد.")
-            return
-
-        await update.message.reply_text("📺 سریال‌های جدید:")
-
-        for series in data['Search'][:10]:
-            title = series.get('Title', 'ناشناس')
-            year = series.get('Year', 'ناشناس')
-            poster = series.get('Poster', '')
-            imdb_id = series.get('imdbID', '')
-            imdb_link = f"https://www.imdb.com/title/{imdb_id}"
-
-            message = f"📺 {title} ({year})\n"
-            buttons = [[InlineKeyboardButton("🔗 صفحه IMDb", url=imdb_link)]]
-            if poster and poster != 'N/A':
-                buttons.append([InlineKeyboardButton("🖼️ پوستر", url=poster)])
-
-            reply_markup = InlineKeyboardMarkup(buttons)
-            await update.message.reply_text(message, reply_markup=reply_markup)
-
-    except Exception as e:
-        await update.message.reply_text("⚠️ خطا در جستجوی سریال‌های جدید. لطفاً بعداً امتحان کن.")
-        print(f"New Series Error: {e}")
-
 async def search_music(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await is_user_member(update, context):
         return
@@ -424,8 +336,6 @@ if __name__ == '__main__':
     application.add_handler(CommandHandler("artist", artist_search))
     application.add_handler(CommandHandler("movie", movie_search))
     application.add_handler(CommandHandler("series", series_search))
-    application.add_handler(CommandHandler("newmovies", new_movies))
-    application.add_handler(CommandHandler("newseries", new_series))
     application.add_handler(CommandHandler("favorites", favorites_command))
     application.add_handler(CallbackQueryHandler(button_callback))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, search_music))
