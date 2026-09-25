@@ -67,9 +67,9 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "دستور /series و بعد اسم سریال\n"
         "مثال: /series Breaking Bad\n\n"
         "🆕 فیلم‌های روز:\n"
-        "دستور /newmovies برای دیدن فیلم‌های جدید ۲۰۲۶\n\n"
+        "دستور /newmovies\n\n"
         "📺 سریال‌های جدید:\n"
-        "دستور /newseries برای دیدن سریال‌های جدید ۲۰۲۶\n\n"
+        "دستور /newseries\n\n"
         "⭐ ذخیره آهنگ:\n"
         "روی دکمه ⭐ ذخیره بزن\n\n"
         "❤️ آهنگ‌های موردعلاقه:\n"
@@ -177,8 +177,7 @@ async def movie_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
         params = {
             "apikey": OMDB_TOKEN,
             "t": movie_name,
-            "plot": "short",
-            "type": "movie"
+            "plot": "short"
         }
         response = requests.get(url, params=params, timeout=15)
         data = response.json()
@@ -233,8 +232,7 @@ async def series_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
         params = {
             "apikey": OMDB_TOKEN,
             "t": series_name,
-            "plot": "short",
-            "type": "series"
+            "plot": "short"
         }
         response = requests.get(url, params=params, timeout=15)
         data = response.json()
@@ -276,19 +274,17 @@ async def series_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print(f"Series Error: {e}")
 
 async def new_movies(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """نمایش فیلم‌های جدید ۲۰۲۶"""
     if not await is_user_member(update, context):
         return
 
-    await update.message.reply_text("🆕 در حال جستجوی فیلم‌های جدید ۲۰۲۶ ...")
+    await update.message.reply_text("🆕 در حال جستجوی فیلم‌های جدید ...")
 
     try:
         url = "https://www.omdbapi.com/"
         params = {
             "apikey": OMDB_TOKEN,
             "s": "2026",
-            "type": "movie",
-            "y": "2026"
+            "type": "movie"
         }
         response = requests.get(url, params=params, timeout=15)
         data = response.json()
@@ -297,7 +293,7 @@ async def new_movies(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ متأسفانه فیلم جدیدی پیدا نشد.")
             return
 
-        await update.message.reply_text("🎬 فیلم‌های جدید ۲۰۲۶:")
+        await update.message.reply_text("🎬 فیلم‌های جدید:")
 
         for movie in data['Search'][:10]:
             title = movie.get('Title', 'ناشناس')
@@ -319,19 +315,17 @@ async def new_movies(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print(f"New Movies Error: {e}")
 
 async def new_series(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """نمایش سریال‌های جدید ۲۰۲۶"""
     if not await is_user_member(update, context):
         return
 
-    await update.message.reply_text("🆕 در حال جستجوی سریال‌های جدید ۲۰۲۶ ...")
+    await update.message.reply_text("🆕 در حال جستجوی سریال‌های جدید ...")
 
     try:
         url = "https://www.omdbapi.com/"
         params = {
             "apikey": OMDB_TOKEN,
             "s": "2026",
-            "type": "series",
-            "y": "2026"
+            "type": "series"
         }
         response = requests.get(url, params=params, timeout=15)
         data = response.json()
@@ -340,7 +334,7 @@ async def new_series(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ متأسفانه سریال جدیدی پیدا نشد.")
             return
 
-        await update.message.reply_text("📺 سریال‌های جدید ۲۰۲۶:")
+        await update.message.reply_text("📺 سریال‌های جدید:")
 
         for series in data['Search'][:10]:
             title = series.get('Title', 'ناشناس')
