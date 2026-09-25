@@ -17,8 +17,16 @@ async def is_user_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         if member.status in ['member', 'administrator', 'creator']:
             return True
         else:
+            keyboard = [
+                [InlineKeyboardButton("📢 عضویت در کانال", url=CHANNEL_URL)],
+                [InlineKeyboardButton("✅ عضو شدم", callback_data="check_join")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
             await update.message.reply_text(
-                "❌ برای استفاده از ربات باید در کانال ما عضو بشید.\n\n📢 لینک عضویت: " + CHANNEL_URL
+                "❌ برای استفاده از ربات باید در کانال ما عضو بشید.\n\n"
+                "۱. روی دکمه «📢 عضویت در کانال» بزن\n"
+                "۲. بعد از عضویت، روی دکمه «✅ عضو شدم» بزن",
+                reply_markup=reply_markup
             )
             return False
     except Exception as e:
@@ -294,6 +302,18 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
+
+    if data == "check_join":
+        user_id = update.effective_user.id
+        try:
+            member = await context.bot.get_chat_member(chat_id=CHANNEL_ID, user_id=user_id)
+            if member.status in ['member', 'administrator', 'creator']:
+                await query.edit_message_text("✅ عضویت شما تأیید شد! حالا می‌تونید از ربات استفاده کنید.")
+            else:
+                await query.answer("❌ هنوز عضو کانال نشدی! اول عضو شو، بعد دوباره امتحان کن.", show_alert=True)
+        except Exception as e:
+            await query.answer("⚠️ خطا در بررسی عضویت.", show_alert=True)
+        return
 
     if data == "help_music":
         await query.message.reply_text("🔍 برای جستجوی آهنگ، فقط اسمش رو بنویس. مثلاً: Shape of You")
