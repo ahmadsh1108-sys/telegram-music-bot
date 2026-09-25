@@ -15,6 +15,4 @@ jobs:
       - run: timeout 290 python bot.py
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-
-        
-OMDB_TOKEN: ${{ secrets.OMDB_TOKEN }}
+          OMDB_TOKEN: ${{ secrets.OMDB_TOKEN }}
