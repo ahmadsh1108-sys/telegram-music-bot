@@ -1,18 +1,30 @@
 name: Run Telegram Bot
+
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/15 * * * *'
   workflow_dispatch:
+
 jobs:
   run-bot:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-      - run: pip install -r requirements.txt
-      - run: timeout 290 python bot.py
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run Telegram Bot
+        run: timeout 590 python bot.py
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           OMDB_TOKEN: ${{ secrets.OMDB_TOKEN }}
+          TMDB_TOKEN: ${{ secrets.TMDB_TOKEN }}
