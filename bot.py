@@ -1,5 +1,6 @@
 import os
 import requests
+from urllib.parse import quote
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -16,7 +17,12 @@ from telegram.ext import (
 # =========================
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
+
+# برای پشتیبان فیلم و سریال
 OMDB_TOKEN = os.environ.get("OMDB_TOKEN")
+
+# توکن TMDB
+TMDB_TOKEN = os.environ.get("TMDB_TOKEN")
 
 CHANNEL_ID = "@shegeftiha_iran_jahan"
 CHANNEL_URL = "https://t.me/shegeftiha_iran_jahan"
@@ -29,6 +35,7 @@ favorites = {}
 # =========================
 
 def membership_keyboard():
+
     keyboard = [
         [
             InlineKeyboardButton(
@@ -52,6 +59,7 @@ def membership_keyboard():
 # =========================
 
 def main_menu_keyboard():
+
     keyboard = [
         [
             InlineKeyboardButton(
@@ -85,11 +93,13 @@ def main_menu_keyboard():
 
 
 # =========================
-# بررسی عضویت کاربر
+# بررسی عضویت
 # =========================
 
 async def check_membership(context, user_id):
+
     try:
+
         member = await context.bot.get_chat_member(
             chat_id=CHANNEL_ID,
             user_id=user_id
@@ -102,7 +112,9 @@ async def check_membership(context, user_id):
         ]
 
     except Exception as e:
+
         print(f"Membership Error: {e}")
+
         return None
 
 
@@ -121,11 +133,14 @@ async def ask_for_membership(update: Update):
     )
 
     if update.callback_query:
+
         await update.callback_query.message.reply_text(
             text,
             reply_markup=membership_keyboard()
         )
+
     elif update.message:
+
         await update.message.reply_text(
             text,
             reply_markup=membership_keyboard()
@@ -133,10 +148,13 @@ async def ask_for_membership(update: Update):
 
 
 # =========================
-# کنترل دسترسی
+# کنترل عضویت
 # =========================
 
-async def require_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def require_membership(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
 
     user_id = update.effective_user.id
 
@@ -145,15 +163,17 @@ async def require_membership(update: Update, context: ContextTypes.DEFAULT_TYPE)
         user_id
     )
 
-    # خطا در بررسی
     if is_member is None:
 
         if update.callback_query:
+
             await update.callback_query.answer(
-                "⚠️ خطا در بررسی عضویت. لطفاً چند لحظه بعد دوباره امتحان کن.",
+                "⚠️ خطا در بررسی عضویت. چند لحظه بعد دوباره امتحان کن.",
                 show_alert=True
             )
+
         elif update.message:
+
             await update.message.reply_text(
                 "⚠️ خطا در بررسی عضویت.\n\n"
                 "لطفاً چند لحظه بعد دوباره امتحان کن."
@@ -161,10 +181,10 @@ async def require_membership(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
         return False
 
-    # عضو نیست
     if not is_member:
 
         if update.callback_query:
+
             await update.callback_query.answer(
                 "❌ هنوز عضو کانال نیستی!",
                 show_alert=True
@@ -173,11 +193,11 @@ async def require_membership(update: Update, context: ContextTypes.DEFAULT_TYPE)
             await ask_for_membership(update)
 
         elif update.message:
+
             await ask_for_membership(update)
 
         return False
 
-    # عضو است
     return True
 
 
@@ -185,7 +205,10 @@ async def require_membership(update: Update, context: ContextTypes.DEFAULT_TYPE)
 # /start
 # =========================
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def start(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
 
     if not await require_membership(update, context):
         return
@@ -214,23 +237,38 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # /help
 # =========================
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def help_command(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
 
     if not await require_membership(update, context):
         return
 
     await update.message.reply_text(
         "📖 راهنمای ربات MelodyHunter\n\n"
+
         "🎵 جستجوی آهنگ:\n"
-        "فقط اسم آهنگ یا خواننده رو بنویس.\n"
-        "مثال: Ed Sheeran\n\n"
+        "اسم آهنگ یا خواننده رو بنویس.\n"
+        "مثال:\n"
+        "محسن چاوشی\n"
+        "یا:\n"
+        "Shape of You\n\n"
+
         "👤 جستجوی خواننده:\n"
         "/artist Ed Sheeran\n\n"
+
         "🎬 جستجوی فیلم:\n"
-        "/movie Inception\n\n"
+        "/movie Inception\n"
+        "یا:\n"
+        "/movie متری شیش و نیم\n\n"
+
         "📺 جستجوی سریال:\n"
-        "/series Breaking Bad\n\n"
-        "⭐ آهنگ‌های موردعلاقه:\n"
+        "/series Breaking Bad\n"
+        "یا:\n"
+        "/series پایتخت\n\n"
+
+        "⭐ علاقه‌مندی‌ها:\n"
         "/favorites"
     )
 
@@ -239,7 +277,10 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # علاقه‌مندی‌ها
 # =========================
 
-async def favorites_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def favorites_command(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
 
     if not await require_membership(update, context):
         return
@@ -280,6 +321,15 @@ async def favorites_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
             ])
 
+        elif fav.get("link"):
+
+            buttons.append([
+                InlineKeyboardButton(
+                    "🔗 لینک کامل",
+                    url=fav["link"]
+                )
+            ])
+
         reply_markup = (
             InlineKeyboardMarkup(buttons)
             if buttons
@@ -296,9 +346,13 @@ async def favorites_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ارسال آهنگ
 # =========================
 
-async def send_song_with_buttons(update, track, artist_name):
+async def send_song_with_buttons(
+    update,
+    track,
+    artist_name
+):
 
-    title = track["title"]
+    title = track.get("title", "نامشخص")
 
     preview = track.get("preview", "")
     link = track.get("link", "")
@@ -366,11 +420,125 @@ async def send_song_with_buttons(update, track, artist_name):
     )
 
 
-# =========================
-# جستجوی خواننده
-# =========================
+# ============================================================
+# جستجوی آهنگ در Deezer
+# ============================================================
 
-async def artist_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def search_deezer(query):
+
+    try:
+
+        response = requests.get(
+            "https://api.deezer.com/search",
+            params={
+                "q": query,
+                "limit": 5
+            },
+            timeout=15
+        )
+
+        response.raise_for_status()
+
+        data = response.json()
+
+        if data.get("data"):
+            return data["data"][0]
+
+    except Exception as e:
+
+        print(f"Deezer Error: {e}")
+
+    return None
+
+
+# ============================================================
+# جستجوی آهنگ
+# ============================================================
+
+async def search_music(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+
+    if not await require_membership(update, context):
+        return
+
+    query = update.message.text.strip()
+
+    if not query:
+        return
+
+    await update.message.reply_text(
+        f"🔍 در حال جستجو برای:\n"
+        f"🎵 {query}\n\n"
+        f"لطفاً کمی صبر کن..."
+    )
+
+    try:
+
+        # جستجوی مستقیم
+        track = search_deezer(query)
+
+        # اگر نتیجه پیدا نشد، چند مدل جستجو
+        if not track:
+
+            alternative_queries = [
+                query.replace(" آهنگ", ""),
+                query.replace(" song", ""),
+                query.replace(" موزیک", ""),
+            ]
+
+            for alternative in alternative_queries:
+
+                alternative = alternative.strip()
+
+                if alternative:
+
+                    track = search_deezer(
+                        alternative
+                    )
+
+                    if track:
+                        break
+
+        if not track:
+
+            await update.message.reply_text(
+                "❌ متأسفانه آهنگی پیدا نشد.\n\n"
+                "💡 اسم آهنگ یا خواننده رو کمی متفاوت امتحان کن."
+            )
+
+            return
+
+        artist_name = (
+            track.get("artist", {})
+            .get("name", "نامشخص")
+        )
+
+        await send_song_with_buttons(
+            update,
+            track,
+            artist_name
+        )
+
+    except Exception as e:
+
+        print(f"Music Error: {e}")
+
+        await update.message.reply_text(
+            "⚠️ خطا در جستجوی آهنگ.\n"
+            "لطفاً دوباره امتحان کن."
+        )
+
+
+# ============================================================
+# جستجوی خواننده
+# ============================================================
+
+async def artist_search(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
 
     if not await require_membership(update, context):
         return
@@ -378,9 +546,11 @@ async def artist_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
 
         await update.message.reply_text(
-            "❌ لطفاً اسم خواننده رو هم بنویس.\n"
+            "❌ لطفاً اسم خواننده رو هم بنویس.\n\n"
             "مثال:\n"
-            "/artist Ed Sheeran"
+            "/artist Ed Sheeran\n\n"
+            "یا:\n"
+            "/artist محسن چاوشی"
         )
 
         return
@@ -393,15 +563,16 @@ async def artist_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
 
-        url = (
-            f"https://api.deezer.com/search/artist"
-            f"?q={artist_name}&limit=1"
-        )
-
         response = requests.get(
-            url,
+            "https://api.deezer.com/search/artist",
+            params={
+                "q": artist_name,
+                "limit": 1
+            },
             timeout=15
         )
+
+        response.raise_for_status()
 
         data = response.json()
 
@@ -416,15 +587,16 @@ async def artist_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
         artist_id = data["data"][0]["id"]
         artist_real_name = data["data"][0]["name"]
 
-        tracks_url = (
-            f"https://api.deezer.com/artist/"
-            f"{artist_id}/top?limit=1"
-        )
-
         tracks_response = requests.get(
-            tracks_url,
+            f"https://api.deezer.com/artist/"
+            f"{artist_id}/top",
+            params={
+                "limit": 5
+            },
             timeout=15
         )
+
+        tracks_response.raise_for_status()
 
         tracks_data = tracks_response.json()
 
@@ -437,86 +609,391 @@ async def artist_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         await update.message.reply_text(
-            f"🎵 آهنگ برتر {artist_real_name}:"
+            f"🎵 چند آهنگ از {artist_real_name}:"
         )
 
-        await send_song_with_buttons(
-            update,
-            tracks_data["data"][0],
-            artist_real_name
-        )
+        # حداکثر 5 آهنگ
+        for track in tracks_data["data"][:5]:
+
+            await send_song_with_buttons(
+                update,
+                track,
+                artist_real_name
+            )
 
     except Exception as e:
 
         print(f"Artist Error: {e}")
 
         await update.message.reply_text(
-            "⚠️ خطا در جستجو. لطفاً بعداً امتحان کن."
+            "⚠️ خطا در جستجوی خواننده."
         )
 
 
-# =========================
-# جستجوی فیلم
-# =========================
+# ============================================================
+# TMDB Request
+# ============================================================
 
-async def movie_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def tmdb_request(endpoint, params=None):
 
-    if not await require_membership(update, context):
-        return
+    if not TMDB_TOKEN:
+        return None
 
-    if not context.args:
-
-        await update.message.reply_text(
-            "❌ لطفاً اسم فیلم رو هم بنویس.\n"
-            "مثال:\n"
-            "/movie Inception"
-        )
-
-        return
-
-    movie_name = " ".join(context.args)
-
-    await update.message.reply_text(
-        f"🎬 در حال جستجوی فیلم {movie_name} ..."
-    )
+    headers = {
+        "Authorization": f"Bearer {TMDB_TOKEN}",
+        "accept": "application/json"
+    }
 
     try:
 
-        url = "https://www.omdbapi.com/"
-
-        params = {
-            "apikey": OMDB_TOKEN,
-            "t": movie_name,
-            "plot": "short"
-        }
-
         response = requests.get(
-            url,
-            params=params,
+            f"https://api.themoviedb.org/3/{endpoint}",
+            headers=headers,
+            params=params or {},
             timeout=15
         )
+
+        response.raise_for_status()
+
+        return response.json()
+
+    except Exception as e:
+
+        print(f"TMDB Error: {e}")
+
+        return None
+
+
+# ============================================================
+# جستجوی فیلم در TMDB
+# ============================================================
+
+def tmdb_movie_search(query):
+
+    # ابتدا فارسی
+    data = tmdb_request(
+        "search/movie",
+        {
+            "query": query,
+            "language": "fa-IR",
+            "include_adult": "false",
+            "page": 1
+        }
+    )
+
+    if data and data.get("results"):
+
+        return data["results"][0]
+
+    # سپس انگلیسی
+    data = tmdb_request(
+        "search/movie",
+        {
+            "query": query,
+            "language": "en-US",
+            "include_adult": "false",
+            "page": 1
+        }
+    )
+
+    if data and data.get("results"):
+
+        return data["results"][0]
+
+    return None
+
+
+# ============================================================
+# جستجوی سریال در TMDB
+# ============================================================
+
+def tmdb_series_search(query):
+
+    # ابتدا فارسی
+    data = tmdb_request(
+        "search/tv",
+        {
+            "query": query,
+            "language": "fa-IR",
+            "page": 1
+        }
+    )
+
+    if data and data.get("results"):
+
+        return data["results"][0]
+
+    # سپس انگلیسی
+    data = tmdb_request(
+        "search/tv",
+        {
+            "query": query,
+            "language": "en-US",
+            "page": 1
+        }
+    )
+
+    if data and data.get("results"):
+
+        return data["results"][0]
+
+    return None
+
+
+# ============================================================
+# فیلم با TMDB
+# ============================================================
+
+async def movie_search_tmdb(
+    update: Update,
+    movie_name
+):
+
+    result = tmdb_movie_search(movie_name)
+
+    if not result:
+        return False
+
+    movie_id = result.get("id")
+
+    details = tmdb_request(
+        f"movie/{movie_id}",
+        {
+            "language": "fa-IR",
+            "append_to_response": "credits"
+        }
+    )
+
+    if not details:
+        details = result
+
+    title = (
+        details.get("title")
+        or details.get("original_title")
+        or movie_name
+    )
+
+    original_title = details.get(
+        "original_title",
+        ""
+    )
+
+    year = "نامشخص"
+
+    release_date = details.get(
+        "release_date",
+        ""
+    )
+
+    if release_date:
+        year = release_date[:4]
+
+    genres = details.get("genres", [])
+
+    genre = ", ".join(
+        g.get("name", "")
+        for g in genres
+        if g.get("name")
+    )
+
+    if not genre:
+        genre = "نامشخص"
+
+    credits = details.get(
+        "credits",
+        {}
+    )
+
+    crew = credits.get(
+        "crew",
+        []
+    )
+
+    directors = [
+        person.get("name")
+        for person in crew
+        if person.get("job") == "Director"
+    ]
+
+    director = (
+        ", ".join(directors)
+        if directors
+        else "نامشخص"
+    )
+
+    cast = credits.get(
+        "cast",
+        []
+    )
+
+    actors = ", ".join(
+        person.get("name", "")
+        for person in cast[:5]
+        if person.get("name")
+    )
+
+    if not actors:
+        actors = "نامشخص"
+
+    overview = details.get(
+        "overview",
+        ""
+    )
+
+    if not overview:
+        overview = "خلاصه‌ای ثبت نشده است."
+
+    rating = details.get(
+        "vote_average",
+        0
+    )
+
+    try:
+        rating = f"{float(rating):.1f}/10"
+    except:
+        rating = "نامشخص"
+
+    poster_path = details.get(
+        "poster_path"
+    )
+
+    poster = ""
+
+    if poster_path:
+
+        poster = (
+            "https://image.tmdb.org/t/p/w500"
+            + poster_path
+        )
+
+    tmdb_link = (
+        f"https://www.themoviedb.org/movie/{movie_id}"
+    )
+
+    message = (
+        f"🎬 {title} ({year})\n\n"
+    )
+
+    if original_title and original_title != title:
+
+        message += (
+            f"🔤 عنوان اصلی: {original_title}\n\n"
+        )
+
+    message += (
+        f"🎭 ژانر: {genre}\n"
+        f"🎥 کارگردان: {director}\n"
+        f"👥 بازیگران: {actors}\n"
+        f"⭐ امتیاز TMDB: {rating}\n\n"
+        f"📝 خلاصه:\n{overview}\n\n"
+        f"🔎 اطلاعات: TMDB"
+    )
+
+    buttons = [
+        [
+            InlineKeyboardButton(
+                "🔗 صفحه فیلم در TMDB",
+                url=tmdb_link
+            )
+        ]
+    ]
+
+    if poster:
+
+        buttons.append([
+            InlineKeyboardButton(
+                "🖼️ پوستر فیلم",
+                url=poster
+            )
+        ])
+
+    await update.message.reply_text(
+        message,
+        reply_markup=InlineKeyboardMarkup(buttons)
+    )
+
+    return True
+
+
+# ============================================================
+# فیلم با OMDb - پشتیبان
+# ============================================================
+
+async def movie_search_omdb(
+    update: Update,
+    movie_name
+):
+
+    if not OMDB_TOKEN:
+        return False
+
+    try:
+
+        response = requests.get(
+            "https://www.omdbapi.com/",
+            params={
+                "apikey": OMDB_TOKEN,
+                "t": movie_name,
+                "plot": "short"
+            },
+            timeout=15
+        )
+
+        response.raise_for_status()
 
         data = response.json()
 
         if data.get("Response") == "False":
+            return False
 
-            await update.message.reply_text(
-                f"❌ فیلمی با اسم «{movie_name}» پیدا نشد."
-            )
+        title = data.get(
+            "Title",
+            "ناشناس"
+        )
 
-            return
+        year = data.get(
+            "Year",
+            "ناشناس"
+        )
 
-        title = data.get("Title", "ناشناس")
-        year = data.get("Year", "ناشناس")
-        genre = data.get("Genre", "ناشناس")
-        director = data.get("Director", "ناشناس")
-        actors = data.get("Actors", "ناشناس")
-        plot = data.get("Plot", "ناشناس")
-        poster = data.get("Poster", "")
-        imdb_rating = data.get("imdbRating", "ناشناس")
-        imdb_id = data.get("imdbID", "")
+        genre = data.get(
+            "Genre",
+            "ناشناس"
+        )
 
-        imdb_link = f"https://www.imdb.com/title/{imdb_id}"
+        director = data.get(
+            "Director",
+            "ناشناس"
+        )
+
+        actors = data.get(
+            "Actors",
+            "ناشناس"
+        )
+
+        plot = data.get(
+            "Plot",
+            "ناشناس"
+        )
+
+        poster = data.get(
+            "Poster",
+            ""
+        )
+
+        imdb_rating = data.get(
+            "imdbRating",
+            "ناشناس"
+        )
+
+        imdb_id = data.get(
+            "imdbID",
+            ""
+        )
+
+        imdb_link = (
+            f"https://www.imdb.com/title/{imdb_id}"
+        )
 
         message = (
             f"🎬 {title} ({year})\n\n"
@@ -550,20 +1027,23 @@ async def movie_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup(buttons)
         )
 
+        return True
+
     except Exception as e:
 
-        print(f"Movie Error: {e}")
+        print(f"OMDb Movie Error: {e}")
 
-        await update.message.reply_text(
-            "⚠️ خطا در جستجوی فیلم. لطفاً بعداً امتحان کن."
-        )
+        return False
 
 
-# =========================
-# جستجوی سریال
-# =========================
+# ============================================================
+# جستجوی فیلم
+# ============================================================
 
-async def series_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def movie_search(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
 
     if not await require_membership(update, context):
         return
@@ -571,63 +1051,328 @@ async def series_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
 
         await update.message.reply_text(
-            "❌ لطفاً اسم سریال رو هم بنویس.\n"
+            "❌ لطفاً اسم فیلم رو هم بنویس.\n\n"
             "مثال:\n"
-            "/series Breaking Bad"
+            "/movie Inception\n\n"
+            "یا:\n"
+            "/movie متری شیش و نیم"
         )
 
         return
 
-    series_name = " ".join(context.args)
+    movie_name = " ".join(context.args)
 
     await update.message.reply_text(
-        f"📺 در حال جستجوی سریال {series_name} ..."
+        f"🎬 در حال جستجوی:\n"
+        f"«{movie_name}» ..."
+    )
+
+    # اول TMDB
+    if TMDB_TOKEN:
+
+        found = await movie_search_tmdb(
+            update,
+            movie_name
+        )
+
+        if found:
+            return
+
+    # سپس OMDb
+    found = await movie_search_omdb(
+        update,
+        movie_name
+    )
+
+    if found:
+        return
+
+    await update.message.reply_text(
+        f"❌ فیلمی با اسم «{movie_name}» پیدا نشد.\n\n"
+        "💡 اسم فیلم رو با شکل دیگری امتحان کن."
+    )
+
+
+# ============================================================
+# سریال با TMDB
+# ============================================================
+
+async def series_search_tmdb(
+    update: Update,
+    series_name
+):
+
+    result = tmdb_series_search(
+        series_name
+    )
+
+    if not result:
+        return False
+
+    series_id = result.get("id")
+
+    details = tmdb_request(
+        f"tv/{series_id}",
+        {
+            "language": "fa-IR",
+            "append_to_response": "credits"
+        }
+    )
+
+    if not details:
+        details = result
+
+    title = (
+        details.get("name")
+        or details.get("original_name")
+        or series_name
+    )
+
+    original_title = details.get(
+        "original_name",
+        ""
+    )
+
+    first_air_date = details.get(
+        "first_air_date",
+        ""
+    )
+
+    year = (
+        first_air_date[:4]
+        if first_air_date
+        else "نامشخص"
+    )
+
+    genres = details.get(
+        "genres",
+        []
+    )
+
+    genre = ", ".join(
+        g.get("name", "")
+        for g in genres
+        if g.get("name")
+    )
+
+    if not genre:
+        genre = "نامشخص"
+
+    credits = details.get(
+        "credits",
+        {}
+    )
+
+    cast = credits.get(
+        "cast",
+        []
+    )
+
+    actors = ", ".join(
+        person.get("name", "")
+        for person in cast[:5]
+        if person.get("name")
+    )
+
+    if not actors:
+        actors = "نامشخص"
+
+    creators = details.get(
+        "created_by",
+        []
+    )
+
+    creator_names = ", ".join(
+        person.get("name", "")
+        for person in creators
+        if person.get("name")
+    )
+
+    if not creator_names:
+        creator_names = "نامشخص"
+
+    overview = details.get(
+        "overview",
+        ""
+    )
+
+    if not overview:
+        overview = "خلاصه‌ای ثبت نشده است."
+
+    rating = details.get(
+        "vote_average",
+        0
     )
 
     try:
+        rating = f"{float(rating):.1f}/10"
+    except:
+        rating = "نامشخص"
 
-        url = "https://www.omdbapi.com/"
+    seasons = details.get(
+        "number_of_seasons",
+        "نامشخص"
+    )
 
-        params = {
-            "apikey": OMDB_TOKEN,
-            "t": series_name,
-            "plot": "short",
-            "type": "series"
-        }
+    episodes = details.get(
+        "number_of_episodes",
+        "نامشخص"
+    )
+
+    poster_path = details.get(
+        "poster_path"
+    )
+
+    poster = ""
+
+    if poster_path:
+
+        poster = (
+            "https://image.tmdb.org/t/p/w500"
+            + poster_path
+        )
+
+    tmdb_link = (
+        f"https://www.themoviedb.org/tv/{series_id}"
+    )
+
+    message = (
+        f"📺 {title} ({year})\n\n"
+    )
+
+    if original_title and original_title != title:
+
+        message += (
+            f"🔤 عنوان اصلی: {original_title}\n\n"
+        )
+
+    message += (
+        f"🎭 ژانر: {genre}\n"
+        f"🎥 سازنده: {creator_names}\n"
+        f"👥 بازیگران: {actors}\n"
+        f"📺 تعداد فصل‌ها: {seasons}\n"
+        f"🎞️ تعداد قسمت‌ها: {episodes}\n"
+        f"⭐ امتیاز TMDB: {rating}\n\n"
+        f"📝 خلاصه:\n{overview}\n\n"
+        f"🔎 اطلاعات: TMDB"
+    )
+
+    buttons = [
+        [
+            InlineKeyboardButton(
+                "🔗 صفحه سریال در TMDB",
+                url=tmdb_link
+            )
+        ]
+    ]
+
+    if poster:
+
+        buttons.append([
+            InlineKeyboardButton(
+                "🖼️ پوستر سریال",
+                url=poster
+            )
+        ])
+
+    await update.message.reply_text(
+        message,
+        reply_markup=InlineKeyboardMarkup(buttons)
+    )
+
+    return True
+
+
+# ============================================================
+# سریال با OMDb - پشتیبان
+# ============================================================
+
+async def series_search_omdb(
+    update: Update,
+    series_name
+):
+
+    if not OMDB_TOKEN:
+        return False
+
+    try:
 
         response = requests.get(
-            url,
-            params=params,
+            "https://www.omdbapi.com/",
+            params={
+                "apikey": OMDB_TOKEN,
+                "t": series_name,
+                "plot": "short",
+                "type": "series"
+            },
             timeout=15
         )
+
+        response.raise_for_status()
 
         data = response.json()
 
         if data.get("Response") == "False":
+            return False
 
-            await update.message.reply_text(
-                f"❌ سریالی با اسم «{series_name}» پیدا نشد."
-            )
+        title = data.get(
+            "Title",
+            "ناشناس"
+        )
 
-            return
+        year = data.get(
+            "Year",
+            "ناشناس"
+        )
 
-        title = data.get("Title", "ناشناس")
-        year = data.get("Year", "ناشناس")
-        genre = data.get("Genre", "ناشناس")
-        director = data.get("Director", "ناشناس")
-        actors = data.get("Actors", "ناشناس")
-        plot = data.get("Plot", "ناشناس")
-        poster = data.get("Poster", "")
-        imdb_rating = data.get("imdbRating", "ناشناس")
-        total_seasons = data.get("totalSeasons", "ناشناس")
-        imdb_id = data.get("imdbID", "")
+        genre = data.get(
+            "Genre",
+            "ناشناس"
+        )
 
-        imdb_link = f"https://www.imdb.com/title/{imdb_id}"
+        director = data.get(
+            "Director",
+            "ناشناس"
+        )
+
+        actors = data.get(
+            "Actors",
+            "ناشناس"
+        )
+
+        plot = data.get(
+            "Plot",
+            "ناشناس"
+        )
+
+        poster = data.get(
+            "Poster",
+            ""
+        )
+
+        imdb_rating = data.get(
+            "imdbRating",
+            "ناشناس"
+        )
+
+        total_seasons = data.get(
+            "totalSeasons",
+            "ناشناس"
+        )
+
+        imdb_id = data.get(
+            "imdbID",
+            ""
+        )
+
+        imdb_link = (
+            f"https://www.imdb.com/title/{imdb_id}"
+        )
 
         message = (
             f"📺 {title} ({year})\n\n"
             f"🎭 ژانر: {genre}\n"
-            f"🎥 کارگردان: {director}\n"
+            f"🎥 سازنده/کارگردان: {director}\n"
             f"👥 بازیگران: {actors}\n"
             f"📺 تعداد فصل‌ها: {total_seasons}\n"
             f"⭐ امتیاز IMDb: {imdb_rating}\n\n"
@@ -657,78 +1402,82 @@ async def series_search(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup(buttons)
         )
 
+        return True
+
     except Exception as e:
 
-        print(f"Series Error: {e}")
+        print(f"OMDb Series Error: {e}")
 
-        await update.message.reply_text(
-            "⚠️ خطا در جستجوی سریال. لطفاً بعداً امتحان کن."
-        )
+        return False
 
 
-# =========================
-# جستجوی آهنگ
-# =========================
+# ============================================================
+# جستجوی سریال
+# ============================================================
 
-async def search_music(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def series_search(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
 
     if not await require_membership(update, context):
         return
 
-    query = update.message.text
-
-    await update.message.reply_text(
-        f"🔍 در حال جستجو برای: {query} ..."
-    )
-
-    try:
-
-        url = (
-            f"https://api.deezer.com/search"
-            f"?q={query}&limit=1"
-        )
-
-        response = requests.get(
-            url,
-            timeout=15
-        )
-
-        data = response.json()
-
-        if not data.get("data"):
-
-            await update.message.reply_text(
-                "❌ متأسفانه آهنگی پیدا نشد. یه اسم دیگه امتحان کن."
-            )
-
-            return
-
-        track = data["data"][0]
-
-        await send_song_with_buttons(
-            update,
-            track,
-            track["artist"]["name"]
-        )
-
-    except Exception as e:
-
-        print(f"Music Error: {e}")
+    if not context.args:
 
         await update.message.reply_text(
-            "⚠️ خطا در جستجو. لطفاً بعداً امتحان کن."
+            "❌ لطفاً اسم سریال رو هم بنویس.\n\n"
+            "مثال:\n"
+            "/series Breaking Bad\n\n"
+            "یا:\n"
+            "/series پایتخت"
         )
 
+        return
 
-# =========================
+    series_name = " ".join(context.args)
+
+    await update.message.reply_text(
+        f"📺 در حال جستجوی:\n"
+        f"«{series_name}» ..."
+    )
+
+    # اول TMDB
+    if TMDB_TOKEN:
+
+        found = await series_search_tmdb(
+            update,
+            series_name
+        )
+
+        if found:
+            return
+
+    # سپس OMDb
+    found = await series_search_omdb(
+        update,
+        series_name
+    )
+
+    if found:
+        return
+
+    await update.message.reply_text(
+        f"❌ سریالی با اسم «{series_name}» پیدا نشد.\n\n"
+        "💡 اسم سریال رو با شکل دیگری امتحان کن."
+    )
+
+
+# ============================================================
 # مدیریت دکمه‌ها
-# =========================
+# ============================================================
 
-async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def button_callback(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
 
     query = update.callback_query
-
-    await query.answer()
 
     data = query.data
 
@@ -737,6 +1486,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # =================================
 
     if data == "check_join":
+
+        await query.answer()
 
         user_id = update.effective_user.id
 
@@ -764,10 +1515,6 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             return
 
-        # ==============================
-        # عضویت تأیید شد
-        # ==============================
-
         user_name = update.effective_user.first_name
 
         text = (
@@ -785,8 +1532,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # =================================
-    # از اینجا به بعد همه دکمه‌ها
-    # دوباره عضویت را بررسی می‌کنند
+    # بررسی عضویت برای سایر دکمه‌ها
     # =================================
 
     is_member = await check_membership(
@@ -814,6 +1560,8 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         return
 
+    await query.answer()
+
     # =================================
     # جستجوی آهنگ
     # =================================
@@ -826,7 +1574,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "مثال:\n"
             "Shape of You\n\n"
             "یا:\n"
-            "Ed Sheeran"
+            "محسن چاوشی"
         )
 
     # =================================
@@ -839,12 +1587,18 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "📖 راهنمای کامل MelodyHunter\n\n"
             "🎵 آهنگ:\n"
             "اسم آهنگ یا خواننده رو بفرست.\n\n"
+
             "👤 خواننده:\n"
             "/artist Ed Sheeran\n\n"
+
             "🎬 فیلم:\n"
-            "/movie Inception\n\n"
+            "/movie Inception\n"
+            "/movie متری شیش و نیم\n\n"
+
             "📺 سریال:\n"
-            "/series Breaking Bad\n\n"
+            "/series Breaking Bad\n"
+            "/series پایتخت\n\n"
+
             "⭐ علاقه‌مندی‌ها:\n"
             "/favorites"
         )
@@ -885,7 +1639,9 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text(
             "🎬 برای جستجوی فیلم:\n\n"
             "دستور زیر را بنویس:\n\n"
-            "/movie Inception"
+            "/movie Inception\n\n"
+            "یا برای فیلم ایرانی:\n"
+            "/movie متری شیش و نیم"
         )
 
     # =================================
@@ -897,7 +1653,9 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text(
             "📺 برای جستجوی سریال:\n\n"
             "دستور زیر را بنویس:\n\n"
-            "/series Breaking Bad"
+            "/series Breaking Bad\n\n"
+            "یا برای سریال ایرانی:\n"
+            "/series پایتخت"
         )
 
     # =================================
@@ -917,7 +1675,24 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
 
         if user_id not in favorites:
+
             favorites[user_id] = []
+
+        # جلوگیری از ذخیره تکراری
+        exists = any(
+            fav["title"] == title
+            and fav["artist"] == artist
+            for fav in favorites[user_id]
+        )
+
+        if exists:
+
+            await query.answer(
+                "⭐ این آهنگ قبلاً ذخیره شده.",
+                show_alert=True
+            )
+
+            return
 
         favorites[user_id].append({
             "title": title,
@@ -954,20 +1729,28 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
-# =========================
+# ============================================================
 # اجرای ربات
-# =========================
+# ============================================================
 
 if __name__ == "__main__":
 
     if not BOT_TOKEN:
+
         raise ValueError(
             "BOT_TOKEN در Environment Variables تنظیم نشده است."
         )
 
     if not OMDB_TOKEN:
+
         print(
             "⚠️ هشدار: OMDB_TOKEN تنظیم نشده است."
+        )
+
+    if not TMDB_TOKEN:
+
+        print(
+            "⚠️ هشدار: TMDB_TOKEN تنظیم نشده است."
         )
 
     application = (
@@ -1011,6 +1794,6 @@ if __name__ == "__main__":
         )
     )
 
-    print("Bot is running...")
+    print("MelodyHunter is running...")
 
     application.run_polling()
